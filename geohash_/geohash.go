@@ -5,13 +5,17 @@ import "strings"
 const base32Chars = "0123456789bcdefghjkmnpqrstuvwxyz"
 
 type GeoHash_ interface {
+	Encode() string
+	ConvertToBinary(coordinate Coordinate, numBits uint8) []byte
 }
 
+// geohash sudah mengimplementasikan interface GeoHash_
 type geohash struct {
 	Latitude   float64
 	Longitude  float64
 	Pressision uint8
 }
+
 
 type Coordinate int
 
@@ -37,15 +41,15 @@ func (gh *geohash) Encode() string {
 		lonBits++
 	}
 
-	latitude := gh.convertToBinary(Latitude, uint8(latBits))
-	longitude := gh.convertToBinary(Longitude, uint8(lonBits))
+	latitude := gh.ConvertToBinary(Latitude, uint8(latBits))
+	longitude := gh.ConvertToBinary(Longitude, uint8(lonBits))
 
 	interleaved := gh.interleaved(longitude, latitude)
 	chunck := gh.chunck(interleaved)
 	decimals := convertBinaryToDecimal(chunck)
-	return gh.hash(decimals)
+	return gh.Hash(decimals)
 }
-func (gh *geohash) convertToBinary(coordinate Coordinate, numBits uint8) []byte {
+func (gh *geohash) ConvertToBinary(coordinate Coordinate, numBits uint8) []byte {
 	DefaultLatitude, DefaultLongitude := []float64{-90.0, 90.0}, []float64{-180.0, 180.0}
 
 	var bounds []float64
@@ -58,8 +62,6 @@ func (gh *geohash) convertToBinary(coordinate Coordinate, numBits uint8) []byte 
 	case Latitude:
 		bounds = DefaultLatitude
 		value = gh.Latitude
-	default:
-		// bisa handle error atau panic kalau perlu
 	}
 
 	left, right := bounds[0], bounds[1]
@@ -78,18 +80,22 @@ func (gh *geohash) convertToBinary(coordinate Coordinate, numBits uint8) []byte 
 	return result
 }
 func (gh *geohash) interleaved(longBins, latBins []byte) []byte {
-	i, j := 0, 0
 	var result []byte
-	for i < len(longBins) && j < len(latBins) {
-		result = append(result, longBins[j])
-		result = append(result, latBins[j])
-		i++
-		j++
+	maxLen := max(len(latBins), len(longBins))
+
+	for i := range maxLen {
+		if i < len(longBins) {
+			result = append(result, longBins[i])
+		}
+		if i < len(latBins) {
+			result = append(result, latBins[i])
+		}
 	}
 	return result
 }
+
 func (gh *geohash) chunck(interleaved []byte) [][5]byte {
-	numChunks := (len(interleaved) + 4) / 5
+	numChunks := (len(interleaved) + 4) / 5 // ceiling div
 	res := make([][5]byte, numChunks)
 
 	for i := 0; i < numChunks*5; i++ {
@@ -98,12 +104,11 @@ func (gh *geohash) chunck(interleaved []byte) [][5]byte {
 			bit = interleaved[i]
 		}
 		res[i/5][i%5] = bit
-
 	}
 	return res
 }
 
-func (gh *geohash) hash(decimals []byte) string {
+func (gh *geohash) Hash(decimals []byte) string {
 	var builder strings.Builder
 	builder.Grow(len(decimals))
 	for _, dec := range decimals {

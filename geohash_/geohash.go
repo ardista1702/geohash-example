@@ -55,7 +55,6 @@ func (gh *geohash) convertToBinary(coordinate string, numBits uint8) []byte {
 
 	left, right := coordinates[0], coordinates[1]
 
-	// Loop sebanyak numBits, bukan gh.Pressision
 	for length := uint8(0); length < numBits; length++ {
 		mid := (left + right) / 2
 		if value > mid {
@@ -112,9 +111,9 @@ func convertBinaryToDecimal(binaries [][5]byte) []byte {
 	var res []byte
 	for _, bin := range binaries {
 		var dec byte = 0
-		for j := range bin {
-			if bin[j] == 1 {
-				dec += pow(2, byte(4-j))
+		for j,bit := range bin {
+			if bit == 1 {
+				dec |= 1 <<(4 - j)
 			}
 		}
 		res = append(res, dec)
@@ -123,13 +122,3 @@ func convertBinaryToDecimal(binaries [][5]byte) []byte {
 	return res
 }
 
-func pow(base, exp byte) byte {
-	if exp == 0 {
-		return 1
-	}
-	if exp%2 == 0 {
-		half := pow(base, exp/2)
-		return half * half
-	}
-	return base * pow(base, exp-1)
-}

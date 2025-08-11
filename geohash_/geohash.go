@@ -2,6 +2,7 @@ package geohash_
 
 import "strings"
 
+const base32Chars = "0123456789bcdefghjkmnpqrstuvwxyz"
 type GeoHash_ interface {
 }
 
@@ -94,17 +95,12 @@ func (gh *geohash) chunck(interleaved []byte) [][5]byte {
 }
 
 func (gh *geohash) hash(decimals []byte) string {
-	base32Table := map[uint8]string{
-		0: "0", 1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7",
-		8: "8", 9: "9", 10: "b", 11: "c", 12: "d", 13: "e", 14: "f", 15: "g",
-		16: "h", 17: "j", 18: "k", 19: "m", 20: "n", 21: "p", 22: "q", 23: "r",
-		24: "s", 25: "t", 26: "u", 27: "v", 28: "w", 29: "x", 30: "y", 31: "z",
-	}
-	var res []string
+	var builder strings.Builder
+	builder.Grow(len(decimals))
 	for _, dec := range decimals {
-		res = append(res, base32Table[dec])
+		builder.WriteByte(base32Chars[dec])
 	}
-	return strings.Join(res, "")
+	return builder.String()
 }
 
 func convertBinaryToDecimal(binaries [][5]byte) []byte {

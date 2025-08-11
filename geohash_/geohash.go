@@ -3,6 +3,7 @@ package geohash_
 import "strings"
 
 const base32Chars = "0123456789bcdefghjkmnpqrstuvwxyz"
+
 type GeoHash_ interface {
 }
 
@@ -11,6 +12,13 @@ type geohash struct {
 	Longitude  float64
 	Pressision uint8
 }
+
+type Coordinate int
+
+const (
+	Longitude Coordinate = iota
+	Latitude
+)
 
 func NewGeoHash(latitude, longitude float64, pressision uint8) *geohash {
 	return &geohash{
@@ -29,40 +37,41 @@ func (gh *geohash) Encode() string {
 		lonBits++
 	}
 
-	latitude := gh.convertToBinary("latitude", uint8(latBits))
-	longitude := gh.convertToBinary("longitude", uint8(lonBits))
+	latitude := gh.convertToBinary(Latitude, uint8(latBits))
+	longitude := gh.convertToBinary(Longitude, uint8(lonBits))
 
 	interleaved := gh.interleaved(longitude, latitude)
 	chunck := gh.chunck(interleaved)
 	decimals := convertBinaryToDecimal(chunck)
 	return gh.hash(decimals)
 }
-func (gh *geohash) convertToBinary(coordinate string, numBits uint8) []byte {
+func (gh *geohash) convertToBinary(coordinate Coordinate, numBits uint8) []byte {
 	DefaultLatitude, DefaultLongitude := []float64{-90.0, 90.0}, []float64{-180.0, 180.0}
 
-	var coordinates []float64
+	var bounds []float64
 	var value float64
 
-	result := make([]byte, numBits)
-
 	switch coordinate {
-	case "longitude":
-		coordinates = DefaultLongitude
+	case Longitude:
+		bounds = DefaultLongitude
 		value = gh.Longitude
-	case "latitude":
-		coordinates = DefaultLatitude
+	case Latitude:
+		bounds = DefaultLatitude
 		value = gh.Latitude
+	default:
+		// bisa handle error atau panic kalau perlu
 	}
 
-	left, right := coordinates[0], coordinates[1]
+	left, right := bounds[0], bounds[1]
 
-	for length := uint8(0); length < numBits; length++ {
+	result := make([]byte, numBits)
+	for i := uint8(0); i < numBits; i++ {
 		mid := (left + right) / 2
 		if value > mid {
-			result[length] = 1
+			result[i] = 1
 			left = mid
 		} else {
-			result[length] = 0
+			result[i] = 0
 			right = mid
 		}
 	}
@@ -107,9 +116,9 @@ func convertBinaryToDecimal(binaries [][5]byte) []byte {
 	var res []byte
 	for _, bin := range binaries {
 		var dec byte = 0
-		for j,bit := range bin {
+		for j, bit := range bin {
 			if bit == 1 {
-				dec |= 1 <<(4 - j)
+				dec |= 1 << (4 - j)
 			}
 		}
 		res = append(res, dec)
@@ -117,4 +126,3 @@ func convertBinaryToDecimal(binaries [][5]byte) []byte {
 	}
 	return res
 }
-

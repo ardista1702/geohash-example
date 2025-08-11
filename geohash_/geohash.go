@@ -9,7 +9,6 @@ type GeoHash_ interface {
 	ConvertToBinary(coordinate Coordinate, numBits uint8) []byte
 }
 
-// geohash sudah mengimplementasikan interface GeoHash_
 type geohash struct {
 	Latitude   float64
 	Longitude  float64
